@@ -5,7 +5,7 @@ library(tidyverse)
 
 #Using 'current prices' for location quotients (LQs). LQs are purely proportional at single time points
 #So across-time comparisons for proportions, not the nominal values (which you can't do with current prices as they don't include inflation)
-#The GVA current price values actually sum correctly across industries and within regions (unlike volume-chained values) - without that, LQ not possible
+#The GVA current price values actually sum correctly across industries and within regions (unlike chained volume values) - without that, LQ not possible
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -86,6 +86,9 @@ itl2.cp <- itl2.cp %>% filter(!`SIC07 code` %in% ITL2_SICremoves) %>%
 itl2.cp <- itl2.cp %>% 
   mutate(value = ifelse(value < 0, NA, value))
 
+#Turn any columns with spaces into snake case
+names(itl2.cp) <- gsub(x = names(itl2.cp), pattern = ' ', replacement = '_')
+
 write_csv(itl2.cp, 'data/ITL2currentprices_long.csv')
 
 
@@ -118,7 +121,7 @@ ITL3_SICremoves = c(
 
 #Using 'current prices' - LQs are purely proportional at single time points
 #So across-time comparisons only matter for the proportions, not the nominal values
-#Given that - the GVA current price values actually sum correctly across industries and within regions (unlike volume-chained)
+#Given that - the GVA current price values actually sum correctly across industries and within regions (unlike chained volume)
 itl3.cp <- read_csv('data/Table 3c ITL3 UK current price estimates pounds million.csv')
 
 #Filter out duplicate value rows and make long by year
@@ -163,6 +166,9 @@ itl3.cp <- itl3.cp %>% filter(!`SIC07 code` %in% ITL3_SICremoves) %>%
 #Only 2021 values for water transport, for four places, again, same as itl2
 itl3.cp <- itl3.cp %>% 
   mutate(value = ifelse(value < 0, NA, value))
+
+#Turn any columns with spaces into snake case
+names(itl3.cp) <- gsub(x = names(itl3.cp), pattern = ' ', replacement = '_')
 
 write_csv(itl3.cp, 'data/ITL3currentprices_long.csv')
 

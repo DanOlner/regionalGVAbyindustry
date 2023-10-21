@@ -8,37 +8,106 @@ Wikipedia has an [excellent explanation with
 maps](https://en.wikipedia.org/wiki/International_Territorial_Level) of
 the ITL regions.
 
+IT2 level data includes several zones that match existing mayoral
+authorities. ITL3 data has zones matching **local** authorities - but
+neither perfectly. Some are grouped. For example, ITL3 zones in South
+Yorkshire separate Sheffield from the other three local authorities in
+South Yorkshire grouped into one zone (Rotherham, Barnsley, Doncaster).
+
 Here, we’ll explore some ways to analyse this data using R. The data has
 been processed to make it more useable in R - see the
 [process_from_excel.R](process_from_excel.R) script and its comments for
 an explanation of how to get from the Excel sheet to the datasets used
-here. All of the derived files (and the original ONS excel sheet,
-currently used version dated 25th April 2023) are included in this
-repository in the [data
-folder](https://github.com/DanOlner/regionalGVAbyindustry/tree/master/data).
-Test relative data folder link: [data folder](data).
+here. All of the derived files (and the original ONS excel sheet
+downloaded from the above page, current version dated 25th April 2023)
+are included in this repository in the [data folder](data).
+
+We’ll look at the **current prices** data, not the chained volume data.
+We’ll be making **location quotients**, which require being able to sum
+different regions in different ways; chained volume measures can’t be
+summed. Current price data (prices at the time point of the data) can’t
+be used to measure nominal growth as it’s not inflation adjusted, but as
+long as we’re working with proportional change over time (which as we’ll
+see, LQs are), they’re fine.
+
+First, load some libraries and get the ITL2 level data. (If you haven’t
+already, install the libraries/packages with
+e.g. `install.packages("tidyverse")` before loading here.) Also, load
+some functions that include an LQ function.
 
 ``` r
-summary(iris)
+library(tidyverse)
+source('functions/misc_functions.R')
+
+itl2.cp <- read_csv('data/ITL2currentprices_long.csv')
 ```
 
-    ##   Sepal.Length    Sepal.Width     Petal.Length    Petal.Width   
-    ##  Min.   :4.300   Min.   :2.000   Min.   :1.000   Min.   :0.100  
-    ##  1st Qu.:5.100   1st Qu.:2.800   1st Qu.:1.600   1st Qu.:0.300  
-    ##  Median :5.800   Median :3.000   Median :4.350   Median :1.300  
-    ##  Mean   :5.843   Mean   :3.057   Mean   :3.758   Mean   :1.199  
-    ##  3rd Qu.:6.400   3rd Qu.:3.300   3rd Qu.:5.100   3rd Qu.:1.800  
-    ##  Max.   :7.900   Max.   :4.400   Max.   :6.900   Max.   :2.500  
-    ##        Species  
-    ##  setosa    :50  
-    ##  versicolor:50  
-    ##  virginica :50  
-    ##                 
-    ##                 
-    ## 
+In this dataframe, we have: ITL2 regions, SIC sectors and year - ranging
+from 1998 to 2021 in the current data - and finally the current price
+GVA value.
+
+Then we’ll find the **location quotients** for the whole dataset. The
+[Excel sheet
+here](https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/locationquotientdataandindustrialspecialisationforlocalauthorities)
+from the ONS has an excellent explanation of location quotients in its
+notes, I won’t repeat all of that here. But a quick word on what the
+location quotient is showing for this data:
+
+- The location quotient gives a **measure of concentration** for sectors
+  within regions, when compared to a larger geography (the UK in this
+  case).
+- The LQ is found easily: it’s the ratio of two ratios - the proportion
+  of a sector in region x, over the proportion of that sector in the UK
+  as a whole.
+- If the LQ \> 1, that industry is *relatively more concentrated* in the
+  region, compared to the UK.
+- If the LQ \< 1, that industry is *relatively less concentrated* in the
+  region, compared to the UK.
+- We’re looking at raw GVA values here - the total GVA value of a
+  particular sector in a region tells us something about that region’s
+  economic structure. But it can’t directly be used to say anything
+  definitive about productivity, since we don’t know e.g. if that GVA
+  value is due to high productivity workers, or just a very large but
+  lower productivity sector.
+- LQs are good for getting a structural overview, but their biggest
+  weakness is that a regional sector can be *proportionally larger* than
+  the UK, but itself quite small. So a region’s top LQ sector may still
+  be a tiny part of its overall economy. We’ll look at a way to overcome
+  that weakness below.
+- Note, as the ONS Excel sheet on LQs make really clear, because
+  (A/B)/(C/D) is equivalent to (A/C)/(B/D), the LQ actually captures two
+  related measures. Here, we’ll only look at **concentration** (whether
+  a region’s industries have a relatively higher concentration of GVA
+  than the UK as a whole).
+
+The LQ function takes in a dataframe, the name of the region column, the
+name of the sector column and the name of the value column to find the
+LQ for. It returns the same dataframe with the LQ and region and total
+proportions added (we’ll need those proportions later), as well the LQ
+logged, which will help with plotting (as the log makes plus/minus 1
+values symmetric).
+
+First, here’s the function working on a single year in the data, to
+illustrate what the function takes in.
 
 ``` r
-plot(iris$Sepal.Length, iris$Sepal.Width)
+lq1998 <- add_location_quotient_and_proportions(
+  df = itl2.cp %>% filter(year == 1998),
+  regionvar = ITL_region_code,
+  lq_var = SIC07_description,
+  valuevar = value
+)
 ```
 
-![](README_files/figure-gfm/iris-1.png)<!-- -->
+Let’s repeat that for all years and replace the original dataframe with
+the result.
+
+``` r
+itl2.cp <- itl2.cp %>% 
+  split(.$year) %>% 
+  map(add_location_quotient_and_proportions, 
+      regionvar = ITL_region_code,
+      lq_var = SIC07_description,
+      valuevar = value) %>% 
+  bind_rows()
+```
