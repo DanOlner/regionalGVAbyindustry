@@ -1,7 +1,13 @@
 
-## R Markdown
+# Analysing the ONS ‘GVA by industry by ITL region’ data in R
 
-This is an R Markdown document that generates a github readme.md file.
+The ONS produces an [Excel
+document](https://www.ons.gov.uk/economy/grossvalueaddedgva/datasets/nominalandrealregionalgrossvalueaddedbalancedbyindustry)
+with GVA data for two different regional scales, ITL2 and ITL3 (as well
+as nationally for the UK as whole). Wikipedia has an [excellent
+explanation with
+maps](https://en.wikipedia.org/wiki/International_Territorial_Level) of
+the ITL regions.
 
 ``` r
 summary(iris)
@@ -26,4 +32,4 @@ summary(iris)
 plot(iris$Sepal.Length, iris$Sepal.Width)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
+![](README_files/figure-gfm/iris-1.png)<!-- -->
