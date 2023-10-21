@@ -32,13 +32,15 @@ see, LQs are), they’re fine.
 
 ## Loading in data and finding location quotients
 
-First, load some libraries and get the ITL2 level data. (If you haven’t
-already, install the libraries/packages with
+First, load the libraries we’ll be using, and get the ITL2 level data.
+(If you haven’t already, install the libraries/packages with
 e.g. `install.packages("tidyverse")` before loading here.) Also, load
 some functions that include an LQ function.
 
 ``` r
 library(tidyverse)
+library(sf)
+library(tmap)
 source('functions/misc_functions.R')
 
 itl2.cp <- read_csv('data/ITL2currentprices_long.csv')
@@ -56,8 +58,8 @@ notes, I won’t repeat all of that here. But a quick word on what the
 location quotient is showing for this data:
 
 - The location quotient gives a **measure of concentration** for sectors
-  within regions, when compared to a larger geography (the UK in this
-  case).
+  (both within regions and across them, see below) when compared to a
+  larger geography (the UK in this case).
 - The LQ is found easily: it’s the ratio of two ratios - the proportion
   of a sector in region x, over the proportion of that sector in the UK
   as a whole.
@@ -76,11 +78,14 @@ location quotient is showing for this data:
   the UK, but itself quite small. So a region’s top LQ sector may still
   be a tiny part of its overall economy. We’ll look at a way to overcome
   that weakness below.
-- Note, as the ONS Excel sheet on LQs make really clear, because
-  (A/B)/(C/D) is equivalent to (A/C)/(B/D), the LQ actually captures two
-  related measures. Here, we’ll only look at **concentration** (whether
-  a region’s industries have a relatively higher concentration of GVA
-  than the UK as a whole).
+- As the [ONS Excel sheet on
+  LQs](https://www.ons.gov.uk/employmentandlabourmarket/peopleinwork/employmentandemployeetypes/datasets/locationquotientdataandindustrialspecialisationforlocalauthorities)
+  make really clear, because (A/B)/(C/D) is equivalent to (A/C)/(B/D),
+  the LQ actually captures two related ways of seeing the same thing:
+  how relatively concentrated sectors are *across a whole geography*
+  like the UK, and how concentrated *within a subgeography* like South
+  Yorkshire they are. (See the table in the ONS document - numbers which
+  can be read either across geographies or across sectors.)
 
 The LQ function takes in a dataframe, the name of the region column, the
 name of the sector column and the name of the value column to find the
@@ -179,33 +184,6 @@ itl2.cp %>% filter(
      9 Repair of computers, personal and household goods                0.162  1.33
     10 Telecommunications                                               2.16   1.32
 
-And West Yorkshire, similarly:
-
-``` r
-itl2.cp %>% filter(
-  ITL_region_name == 'West Yorkshire',
-  year == 2021
-  ) %>% 
-  mutate(regional_percent = sector_regional_proportion *100) %>% 
-  select(SIC07_description,regional_percent, LQ) %>% 
-  arrange(-LQ) %>% 
-  slice(1:10)
-```
-
-    # A tibble: 10 × 3
-       SIC07_description                                   regional_percent    LQ
-       <chr>                                                          <dbl> <dbl>
-     1 Manufacture of textiles                                        1.18   5.60
-     2 Manufacture of furniture                                       0.898  3.65
-     3 Manufacture of machinery and equipment                         2.08   2.46
-     4 Manufacture of other non-metallic mineral products             0.699  2.00
-     5 Printing and reproduction of recorded media                    0.441  1.96
-     6 Gambling and betting activities                                0.475  1.90
-     7 Manufacture of beverages and tobacco products                  0.498  1.60
-     8 Social work activities                                         1.92   1.59
-     9 Veterinary activities                                          0.352  1.52
-    10 Manufacture of wearing apparel and leather products            0.174  1.52
-
 Liverpool City Region has three public-sector-heavy SICs in its LQ top
 ten:
 
@@ -234,14 +212,94 @@ itl2.cp %>% filter(
      9 Warehousing and transport support activities                      1.72   1.34
     10 Land transport                                                    1.40   1.32
 
-## LQ change and growth over time
+As mentioned, the LQ has a handy bonus feature: it can be used either to
+compare sectors *within* subregions, as above, or - looking at
+individual sectors - to see how geographical concentration differs.
 
-The next function adds in some ordinary least squares slopes for LQ
-change over time, to get a sense of the growth trends in LQ for each
-region’s SIC sectors. LQ_log is used so that slope scale is the same for
-different size sectors, so their trends are comparable.
+Sectors with the highest difference across places in the uK will have a
+higher spread between their min and max LQ values. Some sectors - often
+public sectors - are fairly evenly spread everywhere. Here we find the
+spread and pick out the top five most geographically varied:
 
 ``` r
+#Find the geographical variation of sectors using the LQ spread
+LQspread <- itl2.cp %>% 
+  filter(year == 2021) %>% 
+  group_by(SIC07_description) %>% 
+  summarise(LQ_spread = diff(range(LQ))) %>% 
+  arrange(-LQ_spread)
+
+#Show top 5
+LQspread[1:5,]
+```
+
+    # A tibble: 5 × 2
+      SIC07_description                             LQ_spread
+      <chr>                                             <dbl>
+    1 Forestry and fishing                              41.5 
+    2 Mining and quarrying                              35.4 
+    3 Manufacture of beverages and tobacco products     15.4 
+    4 Manufacture of basic metals                       10.8 
+    5 Manufacture of other transport equipment           9.77
+
+That can then be used to pick out particular sectors to map. For
+example, South Yorshire’s most concentrated GVA sector - manufacture of
+basic metals - looks like this across the UK (note South Yorkshire
+doesn’t top the most concentrated for this sector).
+
+The map shapefiles are included in this repo, and can also be downloaded
+from
+[geoportal.statistics.gov.uk](https://geoportal.statistics.gov.uk/).
+
+``` r
+#Load ITL2 map data using the sf library
+itl2.geo <- st_read('data/ITL_geographies/International_Territorial_Level_2_January_2021_UK_BFE_V2_2022_-4735199360818908762/ITL2_JAN_2021_UK_BFE_V2.shp') %>% 
+  st_simplify(preserveTopology = T, dTolerance = 100)
+```
+
+    Reading layer `ITL2_JAN_2021_UK_BFE_V2' from data source 
+      `D:\Dropbox\YPERN\R\regionalGVAbyindustry\data\ITL_geographies\International_Territorial_Level_2_January_2021_UK_BFE_V2_2022_-4735199360818908762\ITL2_JAN_2021_UK_BFE_V2.shp' 
+      using driver `ESRI Shapefile'
+    Simple feature collection with 41 features and 6 fields
+    Geometry type: MULTIPOLYGON
+    Dimension:     XY
+    Bounding box:  xmin: -70.2116 ymin: 5333.602 xmax: 655989 ymax: 1220302
+    Projected CRS: OSGB36 / British National Grid
+
+``` r
+#Join map data to a subset of the GVA data
+sector_LQ_map <- itl2.geo %>% 
+  right_join(
+    itl2.cp %>% filter(
+      year==2021,
+      SIC07_description == LQspread$SIC07_description[4]#picking out the fourth highest geographical spread sector
+      ),
+    by = c('ITL221NM'='ITL_region_name')
+  )
+
+#Plot map
+tm_shape(sector_LQ_map) +
+  tm_polygons('LQ_log', n = 9) +
+  tm_layout(title = 'LQ spread of\nBasic metals\nAcross the UK\nITL2 regions')
+```
+
+![](README_files/figure-gfm/geogconc_map-1.png)<!-- -->
+
+## LQ change and growth over time
+
+Now onto plotting LQs. To do this, we’ll add in a measure of what the
+change/growth trends for LQs are. This next function adds in some
+ordinary least squares slopes for LQ change over time, to get a sense of
+the growth trends in LQ for each region’s SIC sectors. LQ_log is used so
+that slope scale is the same for different size sectors, so their trends
+are comparable. (It returns zero for any region/sector combinations with
+no data at all.)
+
+``` r
+#Use
+#LQ_slopes %>% filter(slope==0)
+#To see which didn't get slopes (only 8 rows in the current data)
+
 LQ_slopes <- compute_slope_or_zero(
   data = itl2.cp, 
   ITL_region_name, SIC07_description, 
