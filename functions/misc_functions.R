@@ -4,18 +4,21 @@ library(tidyverse)
 #Compute series of slopes within groups safely, returning 0 if can't calculate
 compute_slope_or_zero <- function(data, ..., y, x) {
   
-  groups <- quos(...)
+  groups <- quos(...) 
+  y <- enquo(y)
+  x <- enquo(x)
 
-  # Define the function to compute slope
+  #Function to compute slope
   get_slope <- function(data) {
-    model <- lm(data = data, formula = as.formula(paste0(y, " ~ ", x)))
+    # model <- lm(data = data, formula = as.formula(paste0(!!y, " ~ ", !!x)))
+    model <- lm(data = data, formula = as.formula(paste0(quo_name(y), " ~ ", quo_name(x))))
     coef(model)[2]
   }
 
-  # Make it a safe function using purrr::possibly
+  #Make it a safe function using purrr::possibly
   safe_get_slope <- possibly(get_slope, otherwise = 0)
 
-  # Use dplyr to group and summarize
+  #Group and summarize
   data %>%
     group_by(!!!groups) %>%
     nest() %>%

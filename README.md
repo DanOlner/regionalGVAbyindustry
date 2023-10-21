@@ -93,7 +93,7 @@ illustrate what the function takes in.
 ``` r
 lq1998 <- add_location_quotient_and_proportions(
   df = itl2.cp %>% filter(year == 1998),
-  regionvar = ITL_region_code,
+  regionvar = ITL_region_name,
   lq_var = SIC07_description,
   valuevar = value
 )
@@ -106,8 +106,42 @@ the result.
 itl2.cp <- itl2.cp %>% 
   split(.$year) %>% 
   map(add_location_quotient_and_proportions, 
-      regionvar = ITL_region_code,
+      regionvar = ITL_region_name,
       lq_var = SIC07_description,
       valuevar = value) %>% 
   bind_rows()
+```
+
+``` r
+itl2.cp %>% filter(
+  ITL_region_name == 'South Yorkshire',
+  year == 2021,
+  LQ > 1.5
+  ) %>% 
+  mutate(regional_percent = sector_regional_proportion *100) %>% 
+  select(SIC07_description,regional_percent, LQ) %>% 
+  arrange(-LQ)
+```
+
+    # A tibble: 10 × 3
+       SIC07_description                                  regional_percent    LQ
+       <chr>                                                         <dbl> <dbl>
+     1 Manufacture of basic metals                                   1.28   5.14
+     2 Manufacture of furniture                                      0.780  3.17
+     3 Manufacture of fabricated metal products                      2.21   2.79
+     4 Other manufacturing                                           0.694  2.53
+     5 Manufacture of other non-metallic mineral products            0.835  2.39
+     6 Manufacture of rubber and plastic products                    1.02   2.39
+     7 Manufacture of electrical equipment                           0.576  1.95
+     8 Motor trades                                                  2.52   1.80
+     9 Education                                                    10.8    1.70
+    10 Telecommunications                                            2.69   1.64
+
+The next function adds in some ordinary least squares slopes for LQ
+change over time, to get a numerical sense of the growth trends in LQ
+for each region’s SIC sectors. LQ_log is used so that slope scale is the
+same for different size sectors, so their trends are comparable.
+
+``` r
+LQ_slopes <- compute_slope_or_zero(data = itl2.cp, ITL_region_name, SIC07_description, y = LQ_log, x = year)
 ```
