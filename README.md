@@ -266,6 +266,7 @@ sector_LQ_map <- itl2.geo %>%
     by = c('ITL221NM'='ITL_region_name')
   )
 
+
 #Plot map
 tm_shape(sector_LQ_map) +
   tm_polygons('LQ_log', n = 9) +
@@ -276,21 +277,129 @@ tm_shape(sector_LQ_map) +
 
 ## LQ change and growth over time
 
-Now onto plotting LQs. To do this, we’ll add in a measure of what the
-change/growth trends for LQs are. This next function adds in some
-ordinary least squares slopes for LQ change over time, to get a sense of
-the growth trends in LQ for each region’s SIC sectors. LQ_log is used so
-that slope scale is the same for different size sectors, so their trends
-are comparable. (It returns zero for any region/sector combinations with
-no data at all.)
+Now onto plotting LQs themselves. To do this, we’ll add in a measure of
+what the change/growth trends for LQs are, for each sector in each ITL2
+zone. This next function adds in some ordinary least squares slopes for
+LQ change over time, to get a sense of the growth trends. LQ_log is used
+so that slope scale is the same for different size sectors, so their
+trends are comparable. (It returns zero for any region/sector
+combinations with no data at all.)
 
 ``` r
 #Use
 #LQ_slopes %>% filter(slope==0)
 #To see which didn't get slopes (only 8 rows in the current data)
-
 LQ_slopes <- compute_slope_or_zero(
   data = itl2.cp, 
   ITL_region_name, SIC07_description, 
   y = LQ_log, x = year)
+```
+
+We’ll plot data for a single year, but include that information about
+how LQ has changed over the full range of the data from 1998 to 2021.
+
+The following code does three things:
+
+1.  Filters down to a single year and keeps in *yeartoplot*.
+2.  Joins the LQ slopes to this single year, so we can see what the
+    trends were in the rest of the time range for each place and sector
+3.  Finds the minimum and maximum LQ values for the entire data range,
+    for each place and year (this is explained more below when looking
+    at a plot) and adds this to *yeartoplot*.
+
+``` r
+#Filter down to a single year
+yeartoplot <- itl2.cp %>% filter(year == 2021)
+
+#Add slopes into data to get LQ plots
+yeartoplot <- yeartoplot %>% 
+  left_join(
+    LQ_slopes,
+    by = c('ITL_region_name','SIC07_description')
+  )
+
+#Get min/max values for LQ over time as well, for each sector and place, to add as bars so range of sector is easy to see
+minmaxes <- itl2.cp %>% 
+  group_by(SIC07_description,ITL_region_name) %>% 
+  summarise(
+    min_LQ_all_time = min(LQ),
+    max_LQ_all_time = max(LQ)
+  )
+
+#Join min and max
+yeartoplot <- yeartoplot %>% 
+  left_join(
+    minmaxes,
+    by = c('ITL_region_name','SIC07_description')
+  )
+```
+
+We then pick a place to take an initial look at - **Liverpool City
+Region**. This will be the main place on the plot, with others to
+compare to. We also order the sectors by LCR’s LQ, so they’re ordered in
+the plots.
+
+``` r
+place = 'Merseyside'
+
+#Get a vector with sectors ordered by the place's LQs, descending order
+sectorLQorder <- itl2.cp %>% filter(
+  ITL_region_name == place,
+  year == 2021
+) %>% 
+  arrange(-LQ) %>% 
+  select(SIC07_description) %>% 
+  pull()
+
+#Turn the sector column into a factor and order by LCR's LQs
+yeartoplot$SIC07_description <- factor(yeartoplot$SIC07_description, levels = sectorLQorder, ordered = T)
+```
+
+This first plot is unwieldy, but let’s look at every sector before
+zooming in. The plot functions do two things:
+
+1.  The first function (*LQ_baseplot*) begins the plot by adding **all
+    places** faintly. We also have the option of not including this by
+    setting alpha to zero, but it still functions as the base plot
+    initialisation, so always use.
+2.  The function *addplacename_to_LQplot* can be used repeatedly to add
+    specific places with clearer shapes (choose shape numbers from
+    somewhere [like
+    here](http://www.sthda.com/english/wiki/ggplot2-point-shapes)).
+
+Other examples below explain this more, but here’s that plot to start
+with:
+
+``` r
+p <- LQ_baseplot(df = yeartoplot, alpha = 0.1, sector_name = SIC07_description, LQ_column = LQ, change_over_time = slope)
+
+p <- addplacename_to_LQplot(df = yeartoplot, placename = 'Merseyside',
+                            plot_to_addto = p, shapenumber = 16, add_gva = T,
+                        min_LQ_all_time = min_LQ_all_time,max_LQ_all_time = max_LQ_all_time,#don't need to include these
+                        value_column = value, sector_regional_proportion = sector_regional_proportion,#don't need to include these
+                        region_name = ITL_region_name,#The next four, the function needs them all 
+                        sector_name = SIC07_description,
+                        change_over_time = slope, 
+                        LQ_column = LQ 
+                        )
+
+p
+```
+
+The version here is a saved copy with larger dimensions, so it’s (just
+about) readable:
+
+![](README_files/gva_Merseyside_plot.png)
+
+``` r
+# Reduce to SY LQ 1+
+lq.selection <- yeartoplot %>% filter(
+  ITL_region_name == place,
+  LQ > 1
+  )
+
+#Keep only sectors that were LQ > 1 frfom the main plotting df
+yeartoplot <- yeartoplot %>% filter(
+  SIC07_description %in% lq.selection$SIC07_description
+)
 ```
