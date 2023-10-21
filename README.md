@@ -251,6 +251,12 @@ The map shapefiles are included in this repo, and can also be downloaded
 from
 [geoportal.statistics.gov.uk](https://geoportal.statistics.gov.uk/).
 
+``` r
+#Load ITL2 map data using the sf library
+itl2.geo <- st_read('data/ITL_geographies/International_Territorial_Level_2_January_2021_UK_BFE_V2_2022_-4735199360818908762/ITL2_JAN_2021_UK_BFE_V2.shp') %>% 
+  st_simplify(preserveTopology = T, dTolerance = 100)
+```
+
     Reading layer `ITL2_JAN_2021_UK_BFE_V2' from data source 
       `D:\Dropbox\YPERN\R\regionalGVAbyindustry\data\ITL_geographies\International_Territorial_Level_2_January_2021_UK_BFE_V2_2022_-4735199360818908762\ITL2_JAN_2021_UK_BFE_V2.shp' 
       using driver `ESRI Shapefile'
@@ -259,12 +265,6 @@ from
     Dimension:     XY
     Bounding box:  xmin: -70.2116 ymin: 5333.602 xmax: 655989 ymax: 1220302
     Projected CRS: OSGB36 / British National Grid
-
-``` r
-#Load ITL2 map data using the sf library
-itl2.geo <- st_read('data/ITL_geographies/International_Territorial_Level_2_January_2021_UK_BFE_V2_2022_-4735199360818908762/ITL2_JAN_2021_UK_BFE_V2.shp') %>% 
-  st_simplify(preserveTopology = T, dTolerance = 100)
-```
 
 ``` r
 #Join map data to a subset of the GVA data
@@ -282,6 +282,8 @@ tm_shape(sector_LQ_map) +
   tm_polygons('LQ_log', n = 9) +
   tm_layout(title = 'LQ spread of\nBasic metals\nAcross the UK\nITL2 regions')
 ```
+
+![](README_files/figure-gfm/geogconc_map-1.png)<!-- -->
 
 ## LQ change and growth over time
 
