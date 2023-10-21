@@ -3,11 +3,20 @@
 
 The ONS produces an [Excel
 document](https://www.ons.gov.uk/economy/grossvalueaddedgva/datasets/nominalandrealregionalgrossvalueaddedbalancedbyindustry)
-with GVA data for two different regional scales, ITL2 and ITL3 (as well
-as nationally for the UK as whole). Wikipedia has an [excellent
-explanation with
+with GVA data at three different geographical scales, ITL1 to ITL3.
+Wikipedia has an [excellent explanation with
 maps](https://en.wikipedia.org/wiki/International_Territorial_Level) of
 the ITL regions.
+
+Here, we’ll explore some ways to analyse this data using R. The data has
+been processed to make it more useable in R - see the
+[process_from_excel.R](%5Bprocess_from_excel.R) script and its comments
+for an explanation of how to get from the Excel sheet to the datasets
+used here. All of the derived files (and the original ONS excel sheet,
+currently used version dated 25th April 2023) are included in this
+repository in the [data
+folder](https://github.com/DanOlner/regionalGVAbyindustry/tree/master/data).
+Test relative data folder link: [data folder](data).
 
 ``` r
 summary(iris)
