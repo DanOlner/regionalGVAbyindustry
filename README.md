@@ -280,7 +280,7 @@ sector_LQ_map <- itl2.geo %>%
 #Plot map
 tm_shape(sector_LQ_map) +
   tm_polygons('LQ_log', n = 9) +
-  tm_layout(title = 'LQ spread of\nBasic metals\nAcross the UK\nITL2 regions')
+  tm_layout(title = 'LQ spread of\nBasic metals\nAcross ITL2 regions', legend.outside = T)
 ```
 
 ![](README_files/figure-gfm/geogconc_map-1.png)<!-- -->
