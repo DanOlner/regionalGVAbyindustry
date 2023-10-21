@@ -142,7 +142,7 @@ The map shapefiles are included in this repo, and can also be downloaded from [g
 
 ```{r geogconc_map}
 #Load ITL2 map data using the sf library
-itl2.geo <- st_read('data/ITL_geographies/International_Territorial_Level_2_January_2021_UK_BFE_V2_2022_-4735199360818908762/ITL2_JAN_2021_UK_BFE_V2.shp') %>% 
+itl2.geo <- st_read('data/ITL_geographies/International_Territorial_Level_2_January_2021_UK_BFE_V2_2022_-4735199360818908762/ITL2_JAN_2021_UK_BFE_V2.shp', quiet = T) %>% 
   st_simplify(preserveTopology = T, dTolerance = 100)
 
 #Join map data to a subset of the GVA data

@@ -253,20 +253,9 @@ from
 
 ``` r
 #Load ITL2 map data using the sf library
-itl2.geo <- st_read('data/ITL_geographies/International_Territorial_Level_2_January_2021_UK_BFE_V2_2022_-4735199360818908762/ITL2_JAN_2021_UK_BFE_V2.shp') %>% 
+itl2.geo <- st_read('data/ITL_geographies/International_Territorial_Level_2_January_2021_UK_BFE_V2_2022_-4735199360818908762/ITL2_JAN_2021_UK_BFE_V2.shp', quiet = T) %>% 
   st_simplify(preserveTopology = T, dTolerance = 100)
-```
 
-    Reading layer `ITL2_JAN_2021_UK_BFE_V2' from data source 
-      `D:\Dropbox\YPERN\R\regionalGVAbyindustry\data\ITL_geographies\International_Territorial_Level_2_January_2021_UK_BFE_V2_2022_-4735199360818908762\ITL2_JAN_2021_UK_BFE_V2.shp' 
-      using driver `ESRI Shapefile'
-    Simple feature collection with 41 features and 6 fields
-    Geometry type: MULTIPOLYGON
-    Dimension:     XY
-    Bounding box:  xmin: -70.2116 ymin: 5333.602 xmax: 655989 ymax: 1220302
-    Projected CRS: OSGB36 / British National Grid
-
-``` r
 #Join map data to a subset of the GVA data
 sector_LQ_map <- itl2.geo %>% 
   right_join(
