@@ -10,9 +10,9 @@ the ITL regions.
 
 Here, we’ll explore some ways to analyse this data using R. The data has
 been processed to make it more useable in R - see the
-[process_from_excel.R](%5Bprocess_from_excel.R) script and its comments
-for an explanation of how to get from the Excel sheet to the datasets
-used here. All of the derived files (and the original ONS excel sheet,
+[process_from_excel.R](process_from_excel.R) script and its comments for
+an explanation of how to get from the Excel sheet to the datasets used
+here. All of the derived files (and the original ONS excel sheet,
 currently used version dated 25th April 2023) are included in this
 repository in the [data
 folder](https://github.com/DanOlner/regionalGVAbyindustry/tree/master/data).
