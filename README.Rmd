@@ -28,6 +28,7 @@ library(tidyverse)
 library(sf)
 library(tmap)
 source('functions/misc_functions.R')
+options(scipen = 99)#Avoids scientific notation
 
 itl2.cp <- read_csv('data/ITL2currentprices_long.csv')
 
@@ -259,7 +260,7 @@ p <- addplacename_to_LQplot(df = yeartoplot, placename = 'Merseyside',
 p
 ```
 
-The version here is a saved copy with larger dimensions, so it's (just about) readable:
+The version here is a saved copy with larger dimensions, so it's (just about) readable. Let's look at a subset in the plot after this one before explaining what's going on here.
 
 
 ```{r saveplot_dontshow, eval = F, echo = F}

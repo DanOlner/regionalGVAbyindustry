@@ -42,6 +42,7 @@ library(tidyverse)
 library(sf)
 library(tmap)
 source('functions/misc_functions.R')
+options(scipen = 99)#Avoids scientific notation
 
 itl2.cp <- read_csv('data/ITL2currentprices_long.csv')
 ```
@@ -387,7 +388,8 @@ p
 ```
 
 The version here is a saved copy with larger dimensions, so it’s (just
-about) readable:
+about) readable. Let’s look at a subset in the plot after this one
+before explaining what’s going on here.
 
 ![](README_files/gva_Merseyside_plot.png)
 
