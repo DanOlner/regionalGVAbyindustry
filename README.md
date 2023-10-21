@@ -30,6 +30,8 @@ be used to measure nominal growth as it’s not inflation adjusted, but as
 long as we’re working with proportional change over time (which as we’ll
 see, LQs are), they’re fine.
 
+## Loading in data and finding location quotients
+
 First, load some libraries and get the ITL2 level data. (If you haven’t
 already, install the libraries/packages with
 e.g. `install.packages("tidyverse")` before loading here.) Also, load
@@ -112,15 +114,27 @@ itl2.cp <- itl2.cp %>%
   bind_rows()
 ```
 
+Taking a quick look at the resulting LQs, this is **top ten LQ sectors
+for South Yorkshire**, showing which sectors have relatively larger
+proportions of GVA in South Yorkshire compared to the UK as a whole.
+
+Note we can see the point made above about *relative* LQ concentration
+not capturing actual scale. ‘Manufacture of basic metals’ has 5 times
+the GVA concentration of the UK as a whole, but its regional percent of
+GVA is only 1.28%. This is reflecting that this sector is generally
+small everywhere, just larger in South Yorkshire. Contrast with
+‘Education’ - still a higher relative proportion than the UK with an LQ
+of 1.7, but it’s actually nearly 11% of South Yorkshire’s GVA.
+
 ``` r
 itl2.cp %>% filter(
   ITL_region_name == 'South Yorkshire',
-  year == 2021,
-  LQ > 1.5
+  year == 2021
   ) %>% 
   mutate(regional_percent = sector_regional_proportion *100) %>% 
   select(SIC07_description,regional_percent, LQ) %>% 
-  arrange(-LQ)
+  arrange(-LQ) %>% 
+  slice(1:10)
 ```
 
     # A tibble: 10 × 3
@@ -137,11 +151,99 @@ itl2.cp %>% filter(
      9 Education                                                    10.8    1.70
     10 Telecommunications                                            2.69   1.64
 
-The next function adds in some ordinary least squares slopes for LQ
-change over time, to get a numerical sense of the growth trends in LQ
-for each region’s SIC sectors. LQ_log is used so that slope scale is the
-same for different size sectors, so their trends are comparable.
+Repeating that for Greater Manchester, where none of the LQ top ten are
+especially large percentages of its GVA:
 
 ``` r
-LQ_slopes <- compute_slope_or_zero(data = itl2.cp, ITL_region_name, SIC07_description, y = LQ_log, x = year)
+itl2.cp %>% filter(
+  ITL_region_name == 'Greater Manchester',
+  year == 2021
+  ) %>% 
+  mutate(regional_percent = sector_regional_proportion *100) %>% 
+  select(SIC07_description,regional_percent, LQ) %>% 
+  arrange(-LQ) %>% 
+  slice(1:10)
+```
+
+    # A tibble: 10 × 3
+       SIC07_description                                     regional_percent    LQ
+       <chr>                                                            <dbl> <dbl>
+     1 Manufacture of textiles                                          0.732  3.47
+     2 Sports, amusement and recreation activities                      0.979  1.71
+     3 Warehousing and transport support activities                     2.11   1.64
+     4 Manufacture of rubber and plastic products                       0.687  1.61
+     5 Travel agency and tour operator activities                       0.528  1.59
+     6 Office administration and business support activities            1.85   1.50
+     7 Manufacture of food products                                     1.62   1.47
+     8 Manufacture of wood and paper products                           0.573  1.38
+     9 Repair of computers, personal and household goods                0.162  1.33
+    10 Telecommunications                                               2.16   1.32
+
+And West Yorkshire, similarly:
+
+``` r
+itl2.cp %>% filter(
+  ITL_region_name == 'West Yorkshire',
+  year == 2021
+  ) %>% 
+  mutate(regional_percent = sector_regional_proportion *100) %>% 
+  select(SIC07_description,regional_percent, LQ) %>% 
+  arrange(-LQ) %>% 
+  slice(1:10)
+```
+
+    # A tibble: 10 × 3
+       SIC07_description                                   regional_percent    LQ
+       <chr>                                                          <dbl> <dbl>
+     1 Manufacture of textiles                                        1.18   5.60
+     2 Manufacture of furniture                                       0.898  3.65
+     3 Manufacture of machinery and equipment                         2.08   2.46
+     4 Manufacture of other non-metallic mineral products             0.699  2.00
+     5 Printing and reproduction of recorded media                    0.441  1.96
+     6 Gambling and betting activities                                0.475  1.90
+     7 Manufacture of beverages and tobacco products                  0.498  1.60
+     8 Social work activities                                         1.92   1.59
+     9 Veterinary activities                                          0.352  1.52
+    10 Manufacture of wearing apparel and leather products            0.174  1.52
+
+Liverpool City Region has three public-sector-heavy SICs in its LQ top
+ten:
+
+``` r
+itl2.cp %>% filter(
+  ITL_region_name == 'Merseyside',
+  year == 2021
+  ) %>% 
+  mutate(regional_percent = sector_regional_proportion *100) %>% 
+  select(SIC07_description,regional_percent, LQ) %>% 
+  arrange(-LQ) %>% 
+  slice(1:10)
+```
+
+    # A tibble: 10 × 3
+       SIC07_description                                      regional_percent    LQ
+       <chr>                                                             <dbl> <dbl>
+     1 Manufacture of motor vehicles                                     1.96   2.89
+     2 Manufacture of petroleum, chemicals and pharmaceutica…            4.20   2.50
+     3 Manufacture of other non-metallic mineral products                0.770  2.20
+     4 Human health activities                                          12.0    1.91
+     5 Gambling and betting activities                                   0.467  1.86
+     6 Sports, amusement and recreation activities                       1.04   1.81
+     7 Security and investigation activities                             0.323  1.49
+     8 Public administration and defence                                 7.19   1.39
+     9 Warehousing and transport support activities                      1.72   1.34
+    10 Land transport                                                    1.40   1.32
+
+## LQ change and growth over time
+
+The next function adds in some ordinary least squares slopes for LQ
+change over time, to get a sense of the growth trends in LQ for each
+region’s SIC sectors. LQ_log is used so that slope scale is the same for
+different size sectors, so their trends are comparable.
+
+``` r
+LQ_slopes <- compute_slope_or_zero(
+  data = itl2.cp, 
+  ITL_region_name, SIC07_description, 
+  y = LQ_log, x = year)
 ```

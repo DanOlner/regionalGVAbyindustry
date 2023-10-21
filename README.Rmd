@@ -16,6 +16,11 @@ Here, we'll explore some ways to analyse this data using R. The data has been pr
 
 We'll look at the **current prices** data, not the chained volume data. We'll be making **location quotients**, which require being able to sum different regions in different ways; chained volume measures can't be summed. Current price data (prices at the time point of the data) can't be used to measure nominal growth as it's not inflation adjusted, but as long as we're working with proportional change over time (which as we'll see, LQs are), they're fine.
 
+
+
+
+## Loading in data and finding location quotients
+
 First, load some libraries and get the ITL2 level data. (If you haven't already, install the libraries/packages with e.g. `install.packages("tidyverse")` before loading here.) Also, load some functions that include an LQ function.
 
 ```{r loadITL2}
@@ -65,31 +70,79 @@ itl2.cp <- itl2.cp %>%
 
 ```
 
+Taking a quick look at the resulting LQs, this is **top ten LQ sectors for South Yorkshire**, showing which sectors have relatively larger proportions of GVA in South Yorkshire compared to the UK as a whole.
+
+Note we can see the point made above about *relative* LQ concentration not capturing actual scale. 'Manufacture of basic metals' has 5 times the GVA concentration of the UK as a whole, but its regional percent of GVA is only 1.28%. This is reflecting that this sector is generally small everywhere, just larger in South Yorkshire. Contrast with 'Education' - still a higher relative proportion than the UK with an LQ of 1.7, but it's actually nearly 11% of South Yorkshire's GVA.
 
 
-
-```{r quickLQlook}
+```{r quickLQlook_SY}
 itl2.cp %>% filter(
   ITL_region_name == 'South Yorkshire',
-  year == 2021,
-  LQ > 1.5
+  year == 2021
   ) %>% 
   mutate(regional_percent = sector_regional_proportion *100) %>% 
   select(SIC07_description,regional_percent, LQ) %>% 
-  arrange(-LQ)
+  arrange(-LQ) %>% 
+  slice(1:10)
+
+```
+
+Repeating that for Greater Manchester, where none of the LQ top ten are especially large percentages of its GVA:
+
+```{r quickLQlook_GM}
+itl2.cp %>% filter(
+  ITL_region_name == 'Greater Manchester',
+  year == 2021
+  ) %>% 
+  mutate(regional_percent = sector_regional_proportion *100) %>% 
+  select(SIC07_description,regional_percent, LQ) %>% 
+  arrange(-LQ) %>% 
+  slice(1:10)
+
+```
+
+And West Yorkshire, similarly:
+
+```{r quickLQlook_WY}
+itl2.cp %>% filter(
+  ITL_region_name == 'West Yorkshire',
+  year == 2021
+  ) %>% 
+  mutate(regional_percent = sector_regional_proportion *100) %>% 
+  select(SIC07_description,regional_percent, LQ) %>% 
+  arrange(-LQ) %>% 
+  slice(1:10)
+
+```
+
+Liverpool City Region has three public-sector-heavy SICs in its LQ top ten:
+
+```{r quickLQlook_LCR}
+itl2.cp %>% filter(
+  ITL_region_name == 'Merseyside',
+  year == 2021
+  ) %>% 
+  mutate(regional_percent = sector_regional_proportion *100) %>% 
+  select(SIC07_description,regional_percent, LQ) %>% 
+  arrange(-LQ) %>% 
+  slice(1:10)
 
 ```
 
 
 
 
+## LQ change and growth over time 
 
-The next function adds in some ordinary least squares slopes for LQ change over time, to get a numerical sense of the growth trends in LQ for each region's SIC sectors. LQ_log is used so that slope scale is the same for different size sectors, so their trends are comparable.
+The next function adds in some ordinary least squares slopes for LQ change over time, to get a sense of the growth trends in LQ for each region's SIC sectors. LQ_log is used so that slope scale is the same for different size sectors, so their trends are comparable.
 
 
 ```{r slopes}
 
-LQ_slopes <- compute_slope_or_zero(data = itl2.cp, ITL_region_name, SIC07_description, y = LQ_log, x = year)
+LQ_slopes <- compute_slope_or_zero(
+  data = itl2.cp, 
+  ITL_region_name, SIC07_description, 
+  y = LQ_log, x = year)
 
 ```
 
