@@ -375,8 +375,7 @@ ggplot(timeplot %>%
 If we want to look at all places at once, it's useful to do two things:
 
 1. Use a log scale on the y axis, so change scale is comparable and we can see places with smaller sectors.
-2. Use plotly to make an interactive plot, so hovering over lines will show what places are interactively. (That can't be included on this page, but will run in RStudio, and there's an online version here.)
-
+2. Use plotly to make an interactive plot, so hovering over lines will show what places are interactively. (That can't be included on this page, but will run in RStudio, and there's an [online version here](https://danolner.github.io/regionalGVAbyindustry/GVA_percent_liverpool_city_region_motorvehicles.html).)
 
 
 ```{r plotother, fig.width=9}
