@@ -145,9 +145,8 @@ addplacename_to_LQplot <- function(df, plot_to_addto, placename, shapenumber=16,
       alpha = setalpha
     ) 
   
-  #Only need to test for one of these missing, we need both
-  if(!missing(value_column)){
-    
+  #Test for one of these missing, don't display if so
+  if(!(missing(value_column)|missing(sector_regional_proportion))){
     value_column <- enquo(value_column)
     sector_regional_proportion <- enquo(sector_regional_proportion)
     
@@ -158,8 +157,8 @@ addplacename_to_LQplot <- function(df, plot_to_addto, placename, shapenumber=16,
         nudge_x = 0.3, hjust = 1, alpha = 0.7, size = 3
       )
     
-    #Only need to test for one of these missing, we need both
-    if(!missing(min_LQ_all_time)){
+    #Test for one of these missing, don't display if so
+    if(!(missing(min_LQ_all_time)|missing(max_LQ_all_time)) ){
       
       min_LQ_all_time <- enquo(min_LQ_all_time)
       max_LQ_all_time <- enquo(max_LQ_all_time)
@@ -168,7 +167,7 @@ addplacename_to_LQplot <- function(df, plot_to_addto, placename, shapenumber=16,
         geom_errorbar(
           data = df %>% filter(!!region_name == placename),
           aes(y = !!sector_name, xmin = !!min_LQ_all_time, xmax = !!max_LQ_all_time),
-          width = 0.05
+          width = 0.1
         )
       
     }

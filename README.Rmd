@@ -27,6 +27,7 @@ First, load the libraries we'll be using, and get the ITL2 level data. (If you h
 library(tidyverse)
 library(sf)
 library(tmap)
+library(zoo)#For moving average function
 source('functions/misc_functions.R')
 options(scipen = 99)#Avoids scientific notation
 
@@ -246,10 +247,19 @@ ggsave(plot = p, filename = paste0('README_files/gva_',gsub(' ','',place),'_plot
 
 
 
+
+
+A plot for all sectors is a little unwieldy, though interesting to get an overiew. You can view it [here](README_files/gva_Merseyside_plot.png). (The plot code below will produce this full plot if you don't filter first.)
+
+Instead, let's look just at LCR sectors where LQ is more than 1 - that is, sectors that have relatively higher GVA in LCR compared to the rest of the UK. First, find sectors in LCR that are LQ > 1, then use that to get those sectors for all places, so we can compare LCR to those places.
+
+Note the commented out line - there are other useful things to filter by, e.g. if we want only sectors where the LQ had grown relatively over the time range (slope > 1).
+
 ```{r reduceLQ}
 # Reduce to SY LQ 1+
 lq.selection <- yeartoplot %>% filter(
   ITL_region_name == place,
+  # slope > 1,#LQ grew relatively over time
   LQ > 1
   )
 
@@ -260,16 +270,10 @@ yeartoplot <- yeartoplot %>% filter(
 
 ```
 
-A plot for all sectors is a little unwieldy, though interesting to get an overiew. You can view it [here](README_files/gva_Merseyside_plot.png). (The plot code below will produce this full plot if you don't filter first.)
-
-Instead, let's look just at LCR sectors where LQ is more than 1 - that is, sectors that have relatively higher GVA in LCR compared to the rest of the UK. First, find sectors in LCR that are LQ > 1, then use that to get those sectors for all places, so we can compare LCR to those places.
-
-
-The plot functions do two things:
+Now we can plot. The plot functions do two things:
 
 1. The first function (*LQ_baseplot*) begins the plot by adding **all places** (faintness controlled by the alpha value). We also have the option of not including this by setting alpha to zero, but it still functions as the base plot initialisation, so always use.
 2. The function *addplacename_to_LQplot* can be used repeatedly to add specific places with clearer shapes (choose shape numbers from somewhere [like here](http://www.sthda.com/english/wiki/ggplot2-point-shapes)).
-
 
 
 ```{r LQ_plot1, eval = F}
@@ -277,8 +281,8 @@ p <- LQ_baseplot(df = yeartoplot, alpha = 0.1, sector_name = SIC07_description, 
 
 p <- addplacename_to_LQplot(df = yeartoplot, placename = 'Merseyside',
                             plot_to_addto = p, shapenumber = 16,
-                            min_LQ_all_time = min_LQ_all_time,max_LQ_all_time = max_LQ_all_time,#don't need to include these
-                            value_column = value, sector_regional_proportion = sector_regional_proportion,#don't need to include these
+                            min_LQ_all_time = min_LQ_all_time, max_LQ_all_time = max_LQ_all_time,#Range bars won't appear if either of these not included
+                            value_column = value, sector_regional_proportion = sector_regional_proportion,#Sector size numbers won't appear if either of these not included
                             region_name = ITL_region_name,#The next four, the function needs them all 
                             sector_name = SIC07_description,
                             change_over_time = slope, 
@@ -294,9 +298,77 @@ ggsave(plot = p, filename = paste0('README_files/gva_',gsub(' ','',place),'_plot
 
 ```
 
+Details of what's in this plot:
+
+* LQ is on the x axis, log scale so values below 1 are symmetrical. The vertical line at 1 marks where sectors are more or less concentrated than the UK as a whole (more concentrated to the right of the line, LQ > 1). Liverpool City Region sector GVA location quotients are shown in the green and red circles. 
+** Green circles: the LQ trend has *increased* over the full data range (slope > 1)
+** Red circles: the LQ trend has *decreased* over the full data range (slope < 1)
+* Horizontal bar-lines show the full range of the LQ for that sector across all years (more on that below).
+* The fainter background circles show all other ITL2 regions to show where LCR is relative to those. If they're more clustered around 1, they're less geographically varied. (Public sectors like Education tend to be evenly spread, as the plot shows.)
+* On the right hand side, figures for the raw GVA value and its percentage of LCR's total GVA is included.
+
 ![](README_files/gva_Merseyside_plot_LQmorethan1.png)
 
+Some things we can see in this plot:
 
+* As we saw above, manufacture of motor vehicles has LCR's highest LQ value (2.89) means it's close to three times more concentrated in LCR relative to the UK as a whole. It's also got the largest green circle, so it's trend slope is highest from this group. Note what 'growth' means here - if a sector's LQ is 'growing', it's relative. It could be that GVA has been relatively shrinking elsewhere (we'd need to look at GVA change over time to know).
+** Motor vehicles' marker is also on the right of the range bar - it's growing (relatively) and the current year's data is close to the LQ's all time high. (Compare to e.g. Gambling and betting - growing but it's nowhere near its relative growth peak).
+** The GVA % number on the right also shows that motor trades is a bit less than 2% of LCR's economy, compared to 4.2% for 'Manufacture of petroleum, chemicals and pharmaceuticals' - less relatively concentrated in LCR, but larger.
+** 'Petroleum, chemicals and pharmaceuticals' is also a very different relative change story - it's always had a higher LQ in LCR (the range bars don't cross zero) but it's growth circle is red (sloping down) and it's right at the bottom of the LQ range in the latest year.
+
+Let's look more deeply at change over time to see what's happening with Petroleum, chemicals and pharmaceuticals in LCR. The code below does three things:
+
+* Filter the full dataset down to just the one sector. `grepl` is used to save having to use the full sector name (but watch out for multiple sectors with the same words in like 'motor').
+* Use the `zoo` library's `rollapply` function to get a moving average of the sector's regional proportions, so trends are easier to see. (A moving average for LQ is also included, though we don't use it here.)
+* Flag the ITL2 region we're interested in so we can grey out the rest.
+
+
+```{r timeplot1, fig.width=9}
+#Pick a sector to plot separately for all places
+#Use grepl as a shortcut to search for sector names
+timeplot <- itl2.cp %>% 
+  filter(
+    grepl('petroleum', SIC07_description ,ignore.case = T)
+  ) 
+
+#Use zoo's rollapply function to get a moving average
+timeplot <- timeplot %>% 
+  group_by(ITL_region_name) %>% 
+  arrange(year) %>% 
+  mutate(
+    LQ_movingav = rollapply(LQ,3,mean,align='right',fill=NA),
+    percent_movingav = rollapply(sector_regional_proportion * 100,3,mean,align='right',fill=NA)
+  )
+
+#Or pick top size values
+#Largest % in 2021
+largest_percents <- timeplot %>% 
+  filter(year == 2021) %>% 
+  arrange(-percent_movingav)
+
+#Keep only the top ten places and order them
+timeplot <- timeplot %>% 
+  mutate(ITL_region_name = factor(ITL_region_name, ordered = T, levels = largest_percents$ITL_region_name)) %>% 
+  filter(ITL_region_name %in% largest_percents$ITL_region_name[1:10])
+
+#Mark the ITL of interest so it can be clearer in the plot
+timeplot <- timeplot %>%
+  mutate(
+    ITL2ofinterest = ifelse(ITL_region_name == place, 'ITL of interest','other'),
+  )
+
+ggplot(timeplot %>% 
+         rename(`ITL region` = ITL_region_name) %>% 
+         filter(!is.na(percent_movingav)),#remove NAs from dates so the x axis doesn't show them
+       aes(x = year, y = percent_movingav, colour = `ITL region`, size = ITL2ofinterest, linetype = ITL2ofinterest, group = `ITL region`)) +
+  geom_point() +
+  geom_line() +
+  scale_size_manual(values = c(2.5,1)) +
+  scale_color_brewer(palette = 'Paired', direction = 1) +
+  ylab('Regional GVA percent') +
+  guides(size = "none", linetype = "none")
+
+```
 
 
 
