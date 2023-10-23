@@ -854,10 +854,12 @@ p <- p +
 p
 ```
 
-**1998 to 2007:**
+**1998 to 2007. Note larger concentration of shrinking sectors in the
+North.**
 
 ![](README_files/NS_98to07.gif)
 
-**2008 to 2021:**
+**2008 to 2021. Much more mixed, larger number of growing sectors on the
+Northern side of the plot.**
 
 ![](README_files/NS_08to21.gif)
