@@ -219,7 +219,7 @@ As mentioned, the LQ has a handy bonus feature: it can be used either to
 compare sectors *within* subregions, as above, or - looking at
 individual sectors - to see how geographical concentration differs.
 
-Sectors with the highest difference across places in the uK will have a
+Sectors with the highest difference across places in the UK will have a
 higher spread between their min and max LQ values. Some sectors - often
 public sectors - are fairly evenly spread everywhere. Here we find the
 spread and pick out the top five most geographically varied:
@@ -247,8 +247,12 @@ LQspread[1:5,]
 
 That can then be used to pick out particular sectors to map. For
 example, South Yorshire’s most concentrated GVA sector - manufacture of
-basic metals - looks like this across the UK (note South Yorkshire
-doesn’t top the most concentrated for this sector).
+basic metals - is also the UK’s fourth most varied sector, and looks
+like this across the UK (note South Yorkshire doesn’t top the most
+concentrated for this sector).
+
+The geographical pattern is very clear. (Greener colours are more
+concentrated than the UK as whole; redder colours less so.)
 
 The map shapefiles are included in this repo, and can also be downloaded
 from
@@ -339,9 +343,9 @@ yeartoplot <- yeartoplot %>%
 ```
 
 We then pick a place to take an initial look at - **Liverpool City
-Region (LCR)**. This will be the main place on the plot, with others to
-compare to. We also order the sectors by LCR’s LQ, so they’re ordered in
-the plots by LCR.
+Region (LCR)** (which is **Merseyside** in the ITL2 data). This will be
+the main place on the plot, with others to compare to. We also order the
+sectors by LCR’s LQ, so they’re ordered in the plots by LCR.
 
 ``` r
 place = 'Merseyside'
@@ -400,7 +404,8 @@ Now we can plot. The plot functions do two things:
     here](http://www.sthda.com/english/wiki/ggplot2-point-shapes)).
 
 ``` r
-p <- LQ_baseplot(df = yeartoplot, alpha = 0.1, sector_name = SIC07_description, LQ_column = LQ, change_over_time = slope)
+p <- LQ_baseplot(df = yeartoplot, alpha = 0.1, sector_name = SIC07_description, 
+                 LQ_column = LQ, change_over_time = slope)
 
 p <- addplacename_to_LQplot(df = yeartoplot, placename = 'Merseyside',
                             plot_to_addto = p, shapenumber = 16,
@@ -459,6 +464,8 @@ Some things we can see in this plot:
   bars don’t cross zero) but it’s growth circle is red (sloping down)
   and it’s right at the bottom of the LQ range in the latest year.
 
+------------------------------------------------------------------------
+
 We’ll come back to that last sector in a moment, but let’s also see how
 to use the plot code to compare different places more specifically.
 
@@ -485,17 +492,21 @@ So for example, from this we can see:
 
 ``` r
 #Repeat but overlay other places
-p <- LQ_baseplot(df = yeartoplot, alpha = 0, sector_name = SIC07_description, LQ_column = LQ, change_over_time = slope)
+p <- LQ_baseplot(df = yeartoplot, alpha = 0, sector_name = SIC07_description, 
+                 LQ_column = LQ, change_over_time = slope)
 
-p <- addplacename_to_LQplot(df = yeartoplot, plot_to_addto = p, placename = 'Greater Manchester', shapenumber = 23,
+p <- addplacename_to_LQplot(df = yeartoplot, plot_to_addto = p, 
+                            placename = 'Greater Manchester', shapenumber = 23,
                             region_name = ITL_region_name,#The next four, the function needs them all 
                             sector_name = SIC07_description, change_over_time = slope, LQ_column = LQ)
 
-p <- addplacename_to_LQplot(df = yeartoplot, plot_to_addto = p, placename = 'South Yorkshire', shapenumber = 22,
+p <- addplacename_to_LQplot(df = yeartoplot, plot_to_addto = p, 
+                            placename = 'South Yorkshire', shapenumber = 22,
                             region_name = ITL_region_name,
                             sector_name = SIC07_description, change_over_time = slope, LQ_column = LQ)
 
-p <- addplacename_to_LQplot(df = yeartoplot, plot_to_addto = p, placename = place1, shapenumber = 16,
+p <- addplacename_to_LQplot(df = yeartoplot, plot_to_addto = p, 
+                            placename = place1, shapenumber = 16,
                             min_LQ_all_time = min_LQ_all_time,max_LQ_all_time = max_LQ_all_time,#Include minmax
                             value_column = value, sector_regional_proportion = sector_regional_proportion,#include numbers
                             region_name = ITL_region_name,
@@ -694,3 +705,5 @@ ggplot(timeplot.sectors %>%
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+
+## 2D location quotient plots
