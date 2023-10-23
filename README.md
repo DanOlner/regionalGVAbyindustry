@@ -552,10 +552,10 @@ in LCR.
 ``` r
 #Pick a sector to plot separately for all places
 #Use grepl as a shortcut to search for sector names
+sector <- itl2.cp$SIC07_description[grepl('petroleum', itl2.cp$SIC07_description ,ignore.case = T)] %>% unique
+
 timeplot <- itl2.cp %>% 
-  filter(
-    grepl('petroleum', SIC07_description ,ignore.case = T)
-  ) 
+  filter(SIC07_description == sector) 
 
 #Use zoo's rollapply function to get a moving average
 timeplot <- timeplot %>% 
@@ -592,7 +592,11 @@ ggplot(timeplot %>%
   scale_size_manual(values = c(2.5,1)) +
   scale_color_brewer(palette = 'Paired', direction = 1) +
   ylab('Regional GVA percent') +
-  guides(size = "none", linetype = "none")
+  guides(size = "none", linetype = "none") +
+  ggtitle(
+    paste0(sector,'\n', place, ' highlighted')
+      ) +
+    theme(plot.title = element_text(face = 'bold'))
 ```
 
 ![](README_files/figure-gfm/timeplot1-1.png)<!-- -->
@@ -608,10 +612,10 @@ This plot does so for LCR’s largest LQ sector, manufacture of motor
 vehicles.
 
 ``` r
+sector <- itl2.cp$SIC07_description[grepl('motor vehicles', itl2.cp$SIC07_description ,ignore.case = T)] %>% unique
+
 timeplot <- itl2.cp %>% 
-  filter(
-    grepl('motor vehicles', SIC07_description ,ignore.case = T)
-  ) 
+  filter(SIC07_description == sector) 
 
 timeplot <- timeplot %>% 
   group_by(ITL_region_name) %>% 
@@ -634,8 +638,13 @@ p <- ggplot(timeplot %>%
   geom_point() +
   geom_line() +
   scale_y_log10() +
+  ylab('Regional GVA percent (log 10)') +
   scale_size_manual(values = c(2,0.5)) +
-  scale_colour_manual(values = c('black','grey'))
+  scale_colour_manual(values = c('black','grey')) +
+  ggtitle(
+    paste0(sector,'\n', place, ' highlighted')
+      ) +
+    theme(plot.title = element_text(face = 'bold'))
 
 p
 ```
@@ -701,7 +710,11 @@ ggplot(timeplot.sectors %>%
   geom_line() +
   scale_color_brewer(palette = 'Paired', direction = 1) +
   ylab('GVA percent') +
-  guides(size = "none", linetype = "none")
+  guides(size = "none", linetype = "none") +
+   ggtitle(
+    paste0('Top ten sectors by LQ growth trend\n', place)
+      ) +
+    theme(plot.title = element_text(face = 'bold'))
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
