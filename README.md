@@ -511,8 +511,9 @@ p <- p +
 p
 ```
 
-![](README_files/gva_Merseyside_plot_LQmorethan1_3places.png) \##
-Plotting change over time
+![](README_files/gva_Merseyside_plot_LQmorethan1_3places.png)
+
+## Looking at trends
 
 Let’s look more deeply at change over time to see what’s happening with
 Petroleum, chemicals and pharmaceuticals in LCR. Is it actually a
