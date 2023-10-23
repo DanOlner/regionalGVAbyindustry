@@ -854,8 +854,9 @@ p <- p +
 p
 ```
 
-**1998 to 2007. Note larger concentration of shrinking sectors in the
-North.**
+**1998 to 2007. Note larger concentration of shrinking sectors
+concentrated in the North (left of diagonal line) and growing sectors
+concentrated in the South (right of diagonal line)**
 
 ![](README_files/NS_98to07.gif)
 
