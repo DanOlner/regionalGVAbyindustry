@@ -29,7 +29,6 @@ compute_slope_or_zero <- function(data, ..., y, x) {
 
 
 
-
 #Create location quotients (and the regional and larger scale proportions needed to calculate it) and return attached to original dataframe
 add_location_quotient_and_proportions <- function(df, regionvar, lq_var, valuevar){
   

@@ -294,7 +294,7 @@ combinations with no data at all.)
 #To see which didn't get slopes (only 8 rows in the current data)
 LQ_slopes <- compute_slope_or_zero(
   data = itl2.cp, 
-  ITL_region_name, SIC07_description, 
+  ITL_region_name, SIC07_description,#slopes will be found within whatever grouping vars are added here
   y = LQ_log, x = year)
 ```
 
@@ -459,6 +459,61 @@ Some things we can see in this plot:
   bars don’t cross zero) but it’s growth circle is red (sloping down)
   and it’s right at the bottom of the LQ range in the latest year.
 
+We’ll come back to that last sector in a moment, but let’s also see how
+to use the plot code to compare different places more specifically.
+
+The next code chunk does the following:
+
+- Get the base plot, setting alpha to zero so we don’t get all places
+- Add two specific places - Greater Manchester (GM) and South Yorkshire
+  (SY) - without including arguments for the range bars or numbers, as
+  those should be in the final overlay of LCR.
+- Add LCR last so it appears on top.
+
+When comparing different regions like this, it’s helpful to note that
+any sector with a lower LQ is also proportionally a smaller part of that
+region’s economy (the LQ for a particular sector has the same
+denominator across all sectors, so the values here map to regional
+sector percentages.)
+
+So for example, from this we can see:
+
+- GM and SY’s motor vehicle manufacture sectors’ LQs are both below 1,
+  and a smaller proportion of their GVA than LCR.
+- Sectors like rubber and plastics products, and telecoms, are both more
+  concentrated in SY and GM.
+
+``` r
+#Repeat but overlay other places
+p <- LQ_baseplot(df = yeartoplot, alpha = 0, sector_name = SIC07_description, LQ_column = LQ, change_over_time = slope)
+
+p <- addplacename_to_LQplot(df = yeartoplot, plot_to_addto = p, placename = 'Greater Manchester', shapenumber = 23,
+                            region_name = ITL_region_name,#The next four, the function needs them all 
+                            sector_name = SIC07_description, change_over_time = slope, LQ_column = LQ)
+
+p <- addplacename_to_LQplot(df = yeartoplot, plot_to_addto = p, placename = 'South Yorkshire', shapenumber = 22,
+                            region_name = ITL_region_name,
+                            sector_name = SIC07_description, change_over_time = slope, LQ_column = LQ)
+
+p <- addplacename_to_LQplot(df = yeartoplot, plot_to_addto = p, placename = place1, shapenumber = 16,
+                            min_LQ_all_time = min_LQ_all_time,max_LQ_all_time = max_LQ_all_time,#Include minmax
+                            value_column = value, sector_regional_proportion = sector_regional_proportion,#include numbers
+                            region_name = ITL_region_name,
+                            sector_name = SIC07_description, change_over_time = slope, LQ_column = LQ)
+p <- p + 
+  annotate(
+    "text",
+    label = "Greater Manchester: diamonds\nSouth Yorkshire: squares",
+    x = 0.05, y = 'Manufacture of rubber and plastic products',
+    
+  )
+
+p
+```
+
+![](README_files/gva_Merseyside_plot_LQmorethan1_3places.png) \##
+Plotting change over time
+
 Let’s look more deeply at change over time to see what’s happening with
 Petroleum, chemicals and pharmaceuticals in LCR. Is it actually a
 shrinking proportion of LCR’s economy, or has it just grown elsewhere?
@@ -535,8 +590,10 @@ If we want to look at all places at once, it’s useful to do two things:
 1.  Use a log scale on the y axis, so change scale is comparable and we
     can see places with smaller sectors.
 2.  Use plotly to make an interactive plot, so hovering over lines will
-    show what places are interactively. (That can’t be included on this
-    page, but will run in RStudio, and there’s an online version here.)
+    show what places are interactively.
+
+This plot does so for LCR’s largest LQ sector, manufacture of motor
+vehicles.
 
 ``` r
 timeplot <- itl2.cp %>% 
@@ -573,8 +630,66 @@ p
 
 ![](README_files/figure-gfm/plotother-1.png)<!-- -->
 
-It’s easy to convert a ggplot to plotly:
+It’s easy to convert a ggplot to an interactive plotly. It can’t be
+included on this page, but will run in RStudio, and there’s an [online
+version
+here](https://danolner.github.io/regionalGVAbyindustry/GVA_percent_liverpool_city_region_motorvehicles.html).)
 
 ``` r
 ggplotly(p, tooltip = c("ITL region"))
 ```
+
+We can also filter sectors by which has ‘grown’ the most, using the
+function above that found slopes for growth and shrinkage in the
+location quotient.
+
+Rather than plotting LQ though, let’s plot % GVA again, for those 10
+sectors with the largest LQ growth trend. For motor vehicle manufacture,
+we can see it’s actually not a very large part of LCR’s economy. (Note
+land/water transport and retail trade moving closely together too.)
+
+This highlights again a key weakness of using LQs. Though they’re very
+useful for getting a sense of structure, the lack of information about
+actual sector scale can be a problem. We’ll look at a way to address
+this next.
+
+``` r
+#Look just at place of interest
+#And arrange by the 'growth' slope.
+place_slopes <- yeartoplot %>% 
+  filter(ITL_region_name == place) %>% 
+  arrange(-slope)
+
+#Use that to filter the main df and order sectors by which slope is largest
+timeplot.sectors <- itl2.cp %>% 
+  filter(ITL_region_name == place) %>% 
+  mutate(SIC07_description = factor(SIC07_description, ordered = T, levels = place_slopes$SIC07_description))
+
+#Moving averages
+timeplot.sectors <- timeplot.sectors %>% 
+  group_by(ITL_region_name) %>% 
+  arrange(year) %>% 
+  mutate(
+    LQ_movingav = rollapply(LQ,3,mean,align='right',fill=NA),
+    percent_movingav = rollapply(sector_regional_proportion * 100,3,mean,align='right',fill=NA)
+  )
+
+#Filter down to top ten LQ growth sectors
+timeplot.sectors <- timeplot.sectors %>% 
+  filter(
+    SIC07_description %in% place_slopes$SIC07_description[1:10]
+  )
+
+#Plot GVA percent of the largest LQ growth sectors
+ggplot(timeplot.sectors %>% 
+         rename(Sector = SIC07_description) %>% 
+         filter(!is.na(percent_movingav)),#remove NAs from dates so the x axis doesn't show them
+       aes(x = year, y = percent_movingav, colour = Sector, group = Sector)) +
+  geom_point() +
+  geom_line() +
+  scale_color_brewer(palette = 'Paired', direction = 1) +
+  ylab('GVA percent') +
+  guides(size = "none", linetype = "none")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
