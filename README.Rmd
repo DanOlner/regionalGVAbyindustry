@@ -27,6 +27,7 @@ First, load the libraries we'll be using, and get the ITL2 level data. (If you h
 library(tidyverse)
 library(sf)
 library(tmap)
+library(plotly)
 library(zoo)#For moving average function
 source('functions/misc_functions.R')
 options(scipen = 99)#Avoids scientific notation
@@ -301,8 +302,8 @@ ggsave(plot = p, filename = paste0('README_files/gva_',gsub(' ','',place),'_plot
 Details of what's in this plot:
 
 * LQ is on the x axis, log scale so values below 1 are symmetrical. The vertical line at 1 marks where sectors are more or less concentrated than the UK as a whole (more concentrated to the right of the line, LQ > 1). Liverpool City Region sector GVA location quotients are shown in the green and red circles. 
-** Green circles: the LQ trend has *increased* over the full data range (slope > 1)
-** Red circles: the LQ trend has *decreased* over the full data range (slope < 1)
+* Green circles: the LQ trend has *increased* over the full data range (slope > 1)
+* Red circles: the LQ trend has *decreased* over the full data range (slope < 1)
 * Horizontal bar-lines show the full range of the LQ for that sector across all years (more on that below).
 * The fainter background circles show all other ITL2 regions to show where LCR is relative to those. If they're more clustered around 1, they're less geographically varied. (Public sectors like Education tend to be evenly spread, as the plot shows.)
 * On the right hand side, figures for the raw GVA value and its percentage of LCR's total GVA is included.
@@ -311,17 +312,18 @@ Details of what's in this plot:
 
 Some things we can see in this plot:
 
-* As we saw above, manufacture of motor vehicles has LCR's highest LQ value (2.89) means it's close to three times more concentrated in LCR relative to the UK as a whole. It's also got the largest green circle, so it's trend slope is highest from this group. Note what 'growth' means here - if a sector's LQ is 'growing', it's relative. It could be that GVA has been relatively shrinking elsewhere (we'd need to look at GVA change over time to know).
-** Motor vehicles' marker is also on the right of the range bar - it's growing (relatively) and the current year's data is close to the LQ's all time high. (Compare to e.g. Gambling and betting - growing but it's nowhere near its relative growth peak).
-** The GVA % number on the right also shows that motor trades is a bit less than 2% of LCR's economy, compared to 4.2% for 'Manufacture of petroleum, chemicals and pharmaceuticals' - less relatively concentrated in LCR, but larger.
-** 'Petroleum, chemicals and pharmaceuticals' is also a very different relative change story - it's always had a higher LQ in LCR (the range bars don't cross zero) but it's growth circle is red (sloping down) and it's right at the bottom of the LQ range in the latest year.
+* As we saw above, manufacture of motor vehicles has LCR's highest LQ value (2.89) means it's close to three times more concentrated in LCR relative to the UK as a whole. It's also got the largest green circle, so it's trend slope is highest from this group. Note what 'growth' means here - if a sector's LQ is 'growing', it's relative. It could be that GVA has been relatively shrinking elsewhere (we'd need to look at GVA change over time to know - we do this below).
+* Motor vehicles' marker is also on the right of the range bar - it's growing (relatively) and the current year's data is close to the LQ's all time high. (Compare to e.g. Gambling and betting - growing but it's nowhere near its relative growth peak).
+* The GVA % number on the right also shows that motor trades is a bit less than 2% of LCR's economy, compared to 4.2% for 'Manufacture of petroleum, chemicals and pharmaceuticals' - less relatively concentrated in LCR, but larger.
+* 'Petroleum, chemicals and pharmaceuticals' is also a very different relative change story - it's always had a higher LQ in LCR (the range bars don't cross zero) but it's growth circle is red (sloping down) and it's right at the bottom of the LQ range in the latest year.
 
-Let's look more deeply at change over time to see what's happening with Petroleum, chemicals and pharmaceuticals in LCR. The code below does three things:
+Let's look more deeply at change over time to see what's happening with Petroleum, chemicals and pharmaceuticals in LCR. Is it actually a shrinking proportion of LCR's economy, or has it just grown elsewhere? The code below does three things:
 
 * Filter the full dataset down to just the one sector. `grepl` is used to save having to use the full sector name (but watch out for multiple sectors with the same words in like 'motor').
 * Use the `zoo` library's `rollapply` function to get a moving average of the sector's regional proportions, so trends are easier to see. (A moving average for LQ is also included, though we don't use it here.)
-* Flag the ITL2 region we're interested in so we can grey out the rest.
+* Flag the ITL2 region we're interested and, in this case, just keep the top ten places where the sector had the largest GVA proportion on average for the last three years in the data.
 
+From this plot, we can see that, yes, petroleum and chemicals has indeed shrunk as a proportion of LCR's economy, trending down since around 2011. Note, we could in theory plot the actual GVA values but they're not inflation-adjusted so would be misleading. So while we can say from this data what sectors have changed proportionally, it's possible petroleum/chemicals is shrinking due to other sectors' relative growth in LCR.
 
 ```{r timeplot1, fig.width=9}
 #Pick a sector to plot separately for all places
@@ -370,8 +372,52 @@ ggplot(timeplot %>%
 
 ```
 
+If we want to look at all places at once, it's useful to do two things:
+
+1. Use a log scale on the y axis, so change scale is comparable and we can see places with smaller sectors.
+2. Use plotly to make an interactive plot, so hovering over lines will show what places are interactively. (That can't be included on this page, but will run in RStudio, and there's an online version here.)
 
 
+
+```{r plotother, fig.width=9}
+timeplot <- itl2.cp %>% 
+  filter(
+    grepl('motor vehicles', SIC07_description ,ignore.case = T)
+  ) 
+
+timeplot <- timeplot %>% 
+  group_by(ITL_region_name) %>% 
+  arrange(year) %>% 
+  mutate(
+    LQ_movingav = rollapply(LQ,3,mean,align='right',fill=NA),
+    percent_movingav = rollapply(sector_regional_proportion * 100,3,mean,align='right',fill=NA)
+  )
+
+
+timeplot <- timeplot %>%
+  mutate(
+    ITL2ofinterest = ifelse(ITL_region_name == place, 'ITL of interest','other'),
+  )
+
+p <- ggplot(timeplot %>% 
+         rename(`ITL region` = ITL_region_name) %>% 
+         filter(!is.na(percent_movingav)),#remove NAs from dates so the x axis doesn't show them, 
+       aes(x = year, y = percent_movingav, colour = ITL2ofinterest, size = ITL2ofinterest, group = `ITL region`)) +
+  geom_point() +
+  geom_line() +
+  scale_y_log10() +
+  scale_size_manual(values = c(2,0.5)) +
+  scale_colour_manual(values = c('black','grey'))
+
+p
+
+```
+
+It's easy to convert a ggplot to plotly:
+
+```{r, eval = F}
+ggplotly(p, tooltip = c("ITL region"))
+```
 
 
 
