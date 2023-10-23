@@ -596,20 +596,71 @@ p
 
 ```
 
-```{r 2dplotsave, eval=F}
+```{r 2dplotsave, eval=F, echo = F}
 ggsave(plot = p, filename = paste0('README_files/2D_LCR_plot1_log.png'), width = 12, height = 10)
 
 ```
 
 ![](README_files/LCR_v_UK1.gif)
 
+***
+
+These next two plots do the following: 
+
+* Compare South and North England for two different time periods, 1998-2007 and then 2008-2021. 
+* North England is on the y axis (so anything left of the diagonal line is a proportionally larger sector in the North for that time period) and South England on the x axis (vice versa).
+* Each gif flips between 'SE + SW' (sectors that relatively shrunk in the North) and 'NE + NW' (sectors that relatively grew in the North).
+* The earlier period shows a much clearer gulf between structural change in the North and South. For 1998-07, shrinking sectors are much more concentrated in the North than South, and growing sectors much more in South.
+* The later period is much more varied. It's also clear that there are a larger number of sectors relatively growing in the North than there were in the earlier period.
 
 
+```{r northsouth, eval=F}
+#Northern England
+north <- itl2.cp$ITL_region_name[grepl('Greater Manc|Merseyside|West Y|Cumbria|Cheshire|Lancashire|East Y|North Y|Tees|Northumb|South Y', itl2.cp$ITL_region_name, ignore.case = T)] %>% unique
+
+#South England
+south <- itl2.cp$ITL_region_name[!grepl('Greater Manc|Merseyside|West Y|Cumbria|Cheshire|Lancashire|East Y|North Y|Tees|Northumb|South Y|Scot|Highl|Wales|Ireland', itl2.cp$ITL_region_name, ignore.case = T)] %>% unique
+  
+p <- twod_proportionplot(
+  df = itl2.cp,
+  regionvar = ITL_region_name,
+  category_var = SIC07_description, 
+  valuevar = value, 
+  timevar = year, 
+  start_time = 2008,
+  end_time = 2021,
+  # start_time = 1998,
+  # end_time = 2007,
+  compasspoints_to_display = c('SE','SW'),
+  # compasspoints_to_display = c('NE','NW'),
+  y_regionnames = north,
+  x_regionnames = south
+)
+
+#add these after
+p <- p + 
+  xlab('Southern England GVA proportions') +
+  ylab('North England GVA proportions') +
+  scale_y_log10() +
+  scale_x_log10() +
+  coord_fixed(xlim = c(0.1,11), ylim = c(0.1,11))# good for log scale
+
+p
+
+```
 
 
+```{r 2dplotsave2, eval=F, echo = F}
+ggsave(plot = p, filename = paste0('README_files/2D_NS_plot2_t2.png'), width = 12, height = 10)
+
+```
+
+**1998 to 2007:**
+
+![](README_files/NS_98to07.gif)
+
+**2008 to 2021:**
 
 
-
-
-
+![](README_files/NS_08to21.gif)
 

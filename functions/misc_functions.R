@@ -273,7 +273,7 @@ twod_proportionplot <- function(df, regionvar, category_var, valuevar, timevar, 
       lag_x_sector_total_proportion = x_sector_total_proportion - lag(x_sector_total_proportion),
       lag_y_sector_total_proportion = y_sector_total_proportion - lag(y_sector_total_proportion)
     ) %>%
-    filter(year == endyear) %>% #using final year to mark when going in particular compass direction
+    filter(year == end_time) %>% #using final year to mark when going in particular compass direction
     mutate(
       compass = case_when(
         lag_x_sector_total_proportion < 0 & lag_y_sector_total_proportion < 0 ~ 'SW',
@@ -284,15 +284,13 @@ twod_proportionplot <- function(df, regionvar, category_var, valuevar, timevar, 
     )
 
   twoy <- twoy %>%  
-    left_join(
+    left_join( 
       twoy_lags %>%
         select(!!category_var,compass),
       by = quo_name(category_var)
     )
 
-  #Water and air transport snuck in there somehow and added 2020 in
-  # twoy <- twoy %>%
-  #   filter(!grepl('Water and air', SIC07_description))
+  
   twoy.wide <- twoy %>% filter(compass %in% compasspoints_to_display) %>%
     mutate(!!timevar := ifelse(!!timevar == min(!!timevar), 'start', 'end')) %>%
     select(!!category_var,!!timevar,x_sector_total_proportion,y_sector_total_proportion) %>%

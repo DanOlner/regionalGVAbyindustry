@@ -755,17 +755,24 @@ note:
     regions.
   - ‘SW’: sectors that *shrunk* for the x region(s) but *grew* for the y
     regions.
+- The function returns the base plot, and then any optional ggplot
+  extras can be added to it.
 
-An example with LCR on the x axis and the rest of the UK on the y axis,
-looking at both ‘SE’ and ‘NE’ (sectors all ‘grew’ for LCR, but a mix of
-growth and shrinkage in the UK).
-
-The function returns the base plot, and then a few optional extras are
-added to it.
+The next plot puts LCR on the x axis and the rest of the UK on the y
+axis, looking at both ‘SE’ and ‘NE’ (sectors all ‘grew’ for LCR, but a
+mix of growth and shrinkage in the UK). ‘SE’, in purple, has five
+sectors.
 
 Anything to the right of the diagonal line has an LQ higher than 1 (or
 roughly - slightly different number here since the denominator has the
 region in question left out).
+
+The plot included here is a gif that compares what difference logging
+the scales makes. Logging is useful for checking overall structural
+change - movements are proportional at different scales. But it can hide
+the scale of some sectors - for example, it’s clear here that some
+public sectors are (relatively) a much larger proportion both regionally
+and nationally in 2021 than 1998.
 
 ``` r
 p <- twod_proportionplot(
@@ -792,8 +799,65 @@ p <- p +
 p
 ```
 
+![](README_files/LCR_v_UK1.gif)
+
+------------------------------------------------------------------------
+
+These next two plots do the following:
+
+- Compare South and North England for two different time periods,
+  1998-2007 and then 2008-2021.
+- North England is on the y axis (so anything left of the diagonal line
+  is a proportionally larger sector in the North for that time period)
+  and South England on the x axis (vice versa).
+- Each gif flips between ‘SE + SW’ (sectors that relatively shrunk in
+  the North) and ‘NE + NW’ (sectors that relatively grew in the North).
+- The earlier period shows a much clearer gulf between structural change
+  in the North and South. For 1998-07, shrinking sectors are much more
+  concentrated in the North than South, and growing sectors much more in
+  South.
+- The later period is much more varied. It’s also clear that there are a
+  larger number of sectors relatively growing in the North than there
+  were in the earlier period.
+
 ``` r
-ggsave(plot = p, filename = paste0('README_files/2D_LCR_plot1_log.png'), width = 12, height = 10)
+#Northern England
+north <- itl2.cp$ITL_region_name[grepl('Greater Manc|Merseyside|West Y|Cumbria|Cheshire|Lancashire|East Y|North Y|Tees|Northumb|South Y', itl2.cp$ITL_region_name, ignore.case = T)] %>% unique
+
+#South England
+south <- itl2.cp$ITL_region_name[!grepl('Greater Manc|Merseyside|West Y|Cumbria|Cheshire|Lancashire|East Y|North Y|Tees|Northumb|South Y|Scot|Highl|Wales|Ireland', itl2.cp$ITL_region_name, ignore.case = T)] %>% unique
+  
+p <- twod_proportionplot(
+  df = itl2.cp,
+  regionvar = ITL_region_name,
+  category_var = SIC07_description, 
+  valuevar = value, 
+  timevar = year, 
+  start_time = 2008,
+  end_time = 2021,
+  # start_time = 1998,
+  # end_time = 2007,
+  compasspoints_to_display = c('SE','SW'),
+  # compasspoints_to_display = c('NE','NW'),
+  y_regionnames = north,
+  x_regionnames = south
+)
+
+#add these after
+p <- p + 
+  xlab('Southern England GVA proportions') +
+  ylab('North England GVA proportions') +
+  scale_y_log10() +
+  scale_x_log10() +
+  coord_fixed(xlim = c(0.1,11), ylim = c(0.1,11))# good for log scale
+
+p
 ```
 
-![](README_files/LCR_v_UK1.gif)
+**1998 to 2007:**
+
+![](README_files/NS_98to07.gif)
+
+**2008 to 2021:**
+
+![](README_files/NS_08to21.gif)
