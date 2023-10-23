@@ -302,8 +302,9 @@ how LQ has changed over the full range of the data from 1998 to 2021.
 The following code does three things:
 
 1.  Filters down to a single year and keeps in *yeartoplot*.
-2.  Joins the LQ slopes to this single year, so we can see what the
-    trends were in the rest of the time range for each place and sector
+2.  Joins the LQ-over-time slopes to this single year, so we can see
+    what the trends were in the rest of the time range for each place
+    and sector
 3.  Finds the minimum and maximum LQ values for the entire data range,
     for each place and year (this is explained more below when looking
     at a plot) and adds this to *yeartoplot*.
@@ -336,14 +337,15 @@ yeartoplot <- yeartoplot %>%
 ```
 
 We then pick a place to take an initial look at - **Liverpool City
-Region**. This will be the main place on the plot, with others to
+Region (LCR)**. This will be the main place on the plot, with others to
 compare to. We also order the sectors by LCR’s LQ, so they’re ordered in
-the plots.
+the plots by LCR.
 
 ``` r
 place = 'Merseyside'
 
 #Get a vector with sectors ordered by the place's LQs, descending order
+#Use this next to factor-order the SIC sectors
 sectorLQorder <- itl2.cp %>% filter(
   ITL_region_name == place,
   year == 2021
@@ -356,20 +358,39 @@ sectorLQorder <- itl2.cp %>% filter(
 yeartoplot$SIC07_description <- factor(yeartoplot$SIC07_description, levels = sectorLQorder, ordered = T)
 ```
 
-This first plot is unwieldy, but let’s look at every sector before
-zooming in. The plot functions do two things:
+``` r
+# Reduce to SY LQ 1+
+lq.selection <- yeartoplot %>% filter(
+  ITL_region_name == place,
+  LQ > 1
+  )
+
+#Keep only sectors that were LQ > 1 from the main plotting df
+yeartoplot <- yeartoplot %>% filter(
+  SIC07_description %in% lq.selection$SIC07_description
+)
+```
+
+A plot for all sectors is a little unwieldy, though interesting to get
+an overiew. You can view it
+[here](README_files/gva_Merseyside_plot.png). (The plot code below will
+produce this full plot if you don’t filter first.)
+
+Instead, let’s look just at LCR sectors where LQ is more than 1 - that
+is, sectors that have relatively higher GVA in LCR compared to the rest
+of the UK. First, find sectors in LCR that are LQ \> 1, then use that to
+get those sectors for all places, so we can compare LCR to those places.
+
+The plot functions do two things:
 
 1.  The first function (*LQ_baseplot*) begins the plot by adding **all
-    places** faintly. We also have the option of not including this by
-    setting alpha to zero, but it still functions as the base plot
-    initialisation, so always use.
+    places** (faintness controlled by the alpha value). We also have the
+    option of not including this by setting alpha to zero, but it still
+    functions as the base plot initialisation, so always use.
 2.  The function *addplacename_to_LQplot* can be used repeatedly to add
     specific places with clearer shapes (choose shape numbers from
     somewhere [like
     here](http://www.sthda.com/english/wiki/ggplot2-point-shapes)).
-
-Other examples below explain this more, but here’s that plot to start
-with:
 
 ``` r
 p <- LQ_baseplot(df = yeartoplot, alpha = 0.1, sector_name = SIC07_description, LQ_column = LQ, change_over_time = slope)
@@ -387,21 +408,4 @@ p <- addplacename_to_LQplot(df = yeartoplot, placename = 'Merseyside',
 p
 ```
 
-The version here is a saved copy with larger dimensions, so it’s (just
-about) readable. Let’s look at a subset in the plot after this one
-before explaining what’s going on here.
-
-![](README_files/gva_Merseyside_plot.png)
-
-``` r
-# Reduce to SY LQ 1+
-lq.selection <- yeartoplot %>% filter(
-  ITL_region_name == place,
-  LQ > 1
-  )
-
-#Keep only sectors that were LQ > 1 frfom the main plotting df
-yeartoplot <- yeartoplot %>% filter(
-  SIC07_description %in% lq.selection$SIC07_description
-)
-```
+![](README_files/gva_Merseyside_plot_LQmorethan1.png)
