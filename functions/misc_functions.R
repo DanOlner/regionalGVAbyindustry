@@ -1,5 +1,6 @@
 #Misc functions
 library(tidyverse)
+library(ggrepel)
 
 #Compute series of slopes within groups safely, returning 0 if can't calculate
 compute_slope_or_zero <- function(data, ..., y, x) {
@@ -59,6 +60,39 @@ add_location_quotient_and_proportions <- function(df, regionvar, lq_var, valueva
   return(df)
   
 }
+
+
+#Get regional and full geography proportions
+#But the full geography minus the region value so they're
+#Both entirely separate calculations
+#So total can be plotted on one axis and region on the other
+#Without the total including part of the region amount
+# get_sector_total_proportions <- function(df, lq_var, valuevar){
+# 
+#   lq_var <- enquo(lq_var) 
+#   valuevar <- enquo(valuevar)
+# 
+#   df <- df %>%
+#     group_by(!!lq_var) %>%
+#     mutate(
+#       total_sectorsize = sum(!!valuevar, na.rm = T),#c. Summed current prices for EACH SECTOR, UK-wide
+#     ) %>%
+#     ungroup() %>%
+#     mutate(
+#       totalsize = sum(!!valuevar, na.rm = T),#d. Summed current prices for WHOLE UK per year, for UK denominator
+#       sector_total_proportion = total_sectorsize / totalsize#e. UK-level sector proportion, minus the excluded place
+#     )
+# 
+#   return(df)
+# 
+# }
+# 
+
+
+
+
+
+
 
 
 
@@ -175,6 +209,129 @@ addplacename_to_LQplot <- function(df, plot_to_addto, placename, shapenumber=16,
   }
   
   return(plot_to_addto)
+  
+}
+
+
+
+
+
+
+
+
+
+
+#2D PROPORTION PLOT COMPARING TWO TIME POINTS
+# X axis name or names (of subregions)
+# Y axis name or names (of subregions)
+# Column to be comparing (so e.g. we can do smoothing on it beforehand if we want)
+# time variable
+# Start time
+# End time
+# Compass position to display
+twod_proportionplot <- function(df, regionvar, category_var, valuevar, timevar, start_time, end_time, x_regionnames, y_regionnames, compasspoints_to_display = c('NE','NW','SE','SW')){
+  
+  regionvar <- enquo(regionvar)
+  category_var <- enquo(category_var)
+  valuevar <- enquo(valuevar)
+  timevar <- enquo(timevar)
+  
+  x_region_results <- df %>% 
+    filter(!!regionvar %in% x_regionnames) %>% 
+    group_split(!!timevar) %>% 
+    map(add_location_quotient_and_proportions, 
+        regionvar = !!regionvar,
+        lq_var = !!category_var,
+        valuevar = !!valuevar) %>% 
+    bind_rows() %>% 
+    group_by(!!category_var,!!timevar) %>% 
+    summarise(x_sector_total_proportion = min(sector_total_proportion))#just get unique values
+  
+  y_region_results <- df %>% 
+    filter(!!regionvar %in% y_regionnames) %>% 
+    group_split(!!timevar) %>% 
+    map(add_location_quotient_and_proportions, 
+        regionvar = !!regionvar,
+        lq_var = !!category_var,
+        valuevar = !!valuevar) %>% 
+    bind_rows() %>% 
+    group_by(!!category_var,!!timevar) %>% 
+    summarise(y_sector_total_proportion = min(sector_total_proportion))#just get unique values
+  
+  #Join both
+  both <- x_region_results %>% 
+    left_join(
+      y_region_results,
+      by = c(quo_name(category_var),quo_name(timevar))
+    )
+  
+  twoy <- both %>% filter(!!timevar %in% c(start_time, end_time))
+
+  twoy_lags <- twoy %>%
+    arrange(!!category_var,!!timevar) %>%
+    mutate(
+      lag_x_sector_total_proportion = x_sector_total_proportion - lag(x_sector_total_proportion),
+      lag_y_sector_total_proportion = y_sector_total_proportion - lag(y_sector_total_proportion)
+    ) %>%
+    filter(year == endyear) %>% #using final year to mark when going in particular compass direction
+    mutate(
+      compass = case_when(
+        lag_x_sector_total_proportion < 0 & lag_y_sector_total_proportion < 0 ~ 'SW',
+        lag_x_sector_total_proportion < 0 & lag_y_sector_total_proportion > 0 ~ 'NW',
+        lag_x_sector_total_proportion > 0 & lag_y_sector_total_proportion > 0 ~ 'NE',
+        lag_x_sector_total_proportion > 0 & lag_y_sector_total_proportion < 0 ~ 'SE'
+      )
+    )
+
+  twoy <- twoy %>%  
+    left_join(
+      twoy_lags %>%
+        select(!!category_var,compass),
+      by = quo_name(category_var)
+    )
+
+  #Water and air transport snuck in there somehow and added 2020 in
+  # twoy <- twoy %>%
+  #   filter(!grepl('Water and air', SIC07_description))
+  twoy.wide <- twoy %>% filter(compass %in% compasspoints_to_display) %>%
+    mutate(!!timevar := ifelse(!!timevar == min(!!timevar), 'start', 'end')) %>%
+    select(!!category_var,!!timevar,x_sector_total_proportion,y_sector_total_proportion) %>%
+    pivot_wider(names_from = !!timevar, values_from = c(x_sector_total_proportion,y_sector_total_proportion))
+
+  p <- ggplot() +
+    geom_segment(data = twoy.wide, aes(x = x_sector_total_proportion_start * 100, y = y_sector_total_proportion_start  * 100,
+                                       xend = x_sector_total_proportion_end * 100, yend = y_sector_total_proportion_end * 100),
+                 arrow = arrow(length = unit(0.5, "cm")),
+                 size = 1
+    )
+
+  p <- p +
+    geom_point(data = twoy %>% filter(compass%in%compasspoints_to_display), size = 5, alpha = 0.75,
+               aes(x = x_sector_total_proportion * 100, y = y_sector_total_proportion * 100,colour = factor(!!timevar), group = !!category_var)) +
+    geom_line(data = twoy %>% filter(compass %in% compasspoints_to_display), size = 1, aes(x = x_sector_total_proportion * 100, y = y_sector_total_proportion * 100, group = !!category_var), colour = 'red') +
+    geom_abline(slope = 1, size = 1, colour='blue', alpha = 0.5) +
+    # coord_cartesian(xlim = c(0.1,11), ylim = c(0.1,11)) + # good for log scale
+    # scale_y_log10() +
+    # scale_x_log10() +
+    guides(colour=guide_legend(title=" "))
+  
+  p <- p + geom_text_repel(
+    data = twoy %>% filter(!!timevar==max(!!timevar), compass%in%compasspoints_to_display),
+    aes(x = x_sector_total_proportion * 100, y = y_sector_total_proportion * 100,label = !!category_var, colour = compass),
+    alpha=1,
+    nudge_x = .05,
+    box.padding = 1,
+    nudge_y = 0.05,
+    segment.curvature = -0.1,
+    segment.ncp = 0.3,
+    segment.angle = 20,
+    max.overlaps = 20
+  ) +
+    scale_color_manual(values = setNames(c("red", "black",'#7fc97f','#beaed4','#fdc086','#1f78b4'),
+                                         c(start_time, end_time,'NE','SE','NW','SW')))
+
+  p
+
   
 }
 

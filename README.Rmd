@@ -29,6 +29,7 @@ library(sf)
 library(tmap)
 library(plotly)
 library(zoo)#For moving average function
+library(ggrepel)#For self-adjusting plot labels
 source('functions/misc_functions.R')
 options(scipen = 99)#Avoids scientific notation
 
@@ -547,6 +548,64 @@ ggplot(timeplot.sectors %>%
 
 
 ## 2D location quotient plots
+
+One way to address the fact that LQs can be large while the actual proportion of the economy they represent can be tiny (and vice versa) is to break it down into its two component parts. As we've said, the LQ is the ratio of regional sector proportion over the same sector's proportion at the larger geography. We can just plot both of those separately on each axis.
+
+If we're doing this, it also makes sense to remove the region in question when working out the sector proportions for the larger geography, so it's not double-counted, as it is in LQs. Let's look at a plot to explain this, using the `twod_proportionplot` function, which returns a `ggplot` object we can then add to.
+
+Most things going into the function are obvious, but some things to note:
+
+* `x_regionnames` and `x_regionnames` can be any list of ITL2 region names. We want them to be different on each axis. In this case, Liverpool City Region is going on the x axis and the rest of the UK on the y axis (by passing in "Everything except LCR.")
+* In this one, we pass in the earliest and latest possible years to plot. This will show very large structural change given that's a 23 year span.
+* `compasspoints_to_display`: leave blank to display all the data, or here we can specify any combination of 'SE','SW','NE' and 'NW' compass directions. These show the following:
+  - 'NE': sectors that *grew* (in GVA percent terms) for both the x and y region(s).
+  - 'SW': sectors that *shrunk* for both the x and y region(s).
+  - 'SE': sectors that *grew* for the x region(s) but *shrunk* for the y regions.
+  - 'SW': sectors that *shrunk* for the x region(s) but *grew* for the y regions.
+* The function returns the base plot, and then any optional ggplot extras can be added to it.
+
+The next plot puts LCR on the x axis and the rest of the UK on the y axis, looking at both 'SE' and 'NE' (sectors all 'grew' for LCR, but a mix of growth and shrinkage in the UK). 'SE', in purple, has five sectors.
+
+Anything to the right of the diagonal line has an LQ higher than 1 (or roughly - slightly different number here since the denominator has the region in question left out).
+
+The plot included here is a gif that compares what difference logging the scales makes. Logging is useful for checking overall structural change - movements are proportional at different scales. But it can hide the scale of some sectors - for example, it's clear here that some public sectors are (relatively) a much larger proportion both regionally and nationally in 2021 than 1998.
+
+```{r 2d_plot, eval=F}
+p <- twod_proportionplot(
+  df = itl2.cp,
+  x_regionnames = place, 
+  y_regionnames = unique(itl2.cp$ITL_region_name[itl2.cp$ITL_region_name != place]),
+  regionvar = ITL_region_name,
+  category_var = SIC07_description, 
+  valuevar = value, 
+  timevar = year, 
+  start_time = 1998, 
+  end_time = 2021, 
+  compasspoints_to_display = c('SE','NE')
+)
+
+#add some extras
+p <- p + 
+  xlab(paste0(place, ' GVA proportion')) +
+  ylab(paste0('UK GVA proportion (MINUS ',place,')')) +
+  coord_fixed(xlim = c(0.1,12), ylim = c(0.1,12)) +  # good for log scale
+  scale_y_log10() +
+  scale_x_log10()
+
+p
+
+```
+
+```{r 2dplotsave, eval=F}
+ggsave(plot = p, filename = paste0('README_files/2D_LCR_plot1_log.png'), width = 12, height = 10)
+
+```
+
+![](README_files/LCR_v_UK1.gif)
+
+
+
+
 
 
 
