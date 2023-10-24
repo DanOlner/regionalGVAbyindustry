@@ -16,7 +16,7 @@ Here, we'll explore some ways to analyse this data using R. The data has been pr
 
 We'll look at the **current prices** data, not the chained volume data. We'll be making **location quotients**, which require being able to sum different regions in different ways; chained volume measures can't be summed. Current price data (prices at the time point of the data) can't be used to measure nominal growth as it's not inflation adjusted, but as long as we're working with proportional change over time (which as we'll see, LQs are), they're fine.
 
-**The code is available in a single script in the `GVAcode.R` file.**
+**The code is available in a single script in the [GVAcode.R file](GVAcode.R).**
 
 ## Loading in data and finding location quotients
 
