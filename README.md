@@ -30,6 +30,8 @@ be used to measure nominal growth as it’s not inflation adjusted, but as
 long as we’re working with proportional change over time (which as we’ll
 see, LQs are), they’re fine.
 
+**The code is available in a single script in the `GVAcode.R` file.**
+
 ## Loading in data and finding location quotients
 
 First, load the libraries we’ll be using, and get the ITL2 level data.
