@@ -273,7 +273,7 @@ twod_proportionplot <- function(df, regionvar, category_var, valuevar, timevar, 
       lag_x_sector_total_proportion = x_sector_total_proportion - lag(x_sector_total_proportion),
       lag_y_sector_total_proportion = y_sector_total_proportion - lag(y_sector_total_proportion)
     ) %>%
-    filter(year == end_time) %>% #using final year to mark when going in particular compass direction
+    filter(!!timevar == end_time) %>% #using final year to mark when going in particular compass direction
     mutate(
       compass = case_when(
         lag_x_sector_total_proportion < 0 & lag_y_sector_total_proportion < 0 ~ 'SW',

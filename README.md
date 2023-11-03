@@ -692,7 +692,7 @@ timeplot.sectors <- itl2.cp %>%
 
 #Moving averages
 timeplot.sectors <- timeplot.sectors %>% 
-  group_by(ITL_region_name) %>% 
+  group_by(SIC07_description) %>% 
   arrange(year) %>% 
   mutate(
     LQ_movingav = rollapply(LQ,3,mean,align='right',fill=NA),
